@@ -1,0 +1,13 @@
+# Common settings
+BasedOnStyle:    Google
+TabWidth:        4
+IndentWidth:     4
+UseTab:          Never
+
+
+Language: Cpp
+
+ColumnLimit: 0
+
+# Comments are for developers, they should arrange them
+ReflowComments: false
