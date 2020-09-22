@@ -57,15 +57,7 @@ unsigned long lastBlDbncTime = 0;
 unsigned long debounceTime = 50;
 
 int goal = 0;
-int inputVal = 0;
-
-struct bits {
-    unsigned int r : 1;
-    unsigned int g : 1;
-    unsigned int b : 1;
-};
-
-struct bits rgb;
+byte inputVal = 0b10000000;
 
 void loop() {
     unsigned long ms = millis();
@@ -80,26 +72,26 @@ void loop() {
         Serial.print("Sec: ");
         Serial.println(ms / 1000);
         Serial.print("Input: ");
-        Serial.println(inputVal);
+        Serial.println(inputVal, BIN);
     }
 
-    if (ms - lastReDbncTime > debounceTime && reRead != rgb.r) {
-        rgb.r = !rgb.r;
+    if (ms - lastReDbncTime > debounceTime && reRead != bitRead(inputVal, 0)) {
+        bitWrite(inputVal, 0, !bitRead(inputVal, 0));
     }
-    if (ms - lastBkDbncTime > debounceTime && bkRead != rgb.g) {
-        rgb.g = !rgb.g;
+    if (ms - lastBkDbncTime > debounceTime && bkRead != bitRead(inputVal, 1)) {
+        bitWrite(inputVal, 1, !bitRead(inputVal, 1));
     }
-    if (ms - lastBlDbncTime > debounceTime && blRead != rgb.b) {
-        rgb.b = !rgb.b;
+    if (ms - lastBlDbncTime > debounceTime && blRead != bitRead(inputVal, 2)) {
+        bitWrite(inputVal, 2, !bitRead(inputVal, 2));
     }
 
     lastReState = reRead;
     lastBlState = blRead;
     lastBkState = bkRead;
 
-    digitalWrite(multiRedPin, rgb.r);
-    digitalWrite(multiGreenPin, rgb.g);
-    digitalWrite(multiBluePin, rgb.b);
+    digitalWrite(multiRedPin, bitRead(inputVal, 0));
+    digitalWrite(multiGreenPin, bitRead(inputVal, 1));
+    digitalWrite(multiBluePin, bitRead(inputVal, 2));
 
     delay(1);
 }
