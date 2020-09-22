@@ -20,11 +20,6 @@ int buzzPin = 10;
 // W  512, 1023
 // NW 0, 1023
 
-//SET bit
-//var |= 1UL << bit;
-//CLR bit
-//var &= ~(1UL << bit);
-
 //ANALOG INPUTS
 int xPin = A0;
 int yPin = A1;
@@ -64,12 +59,23 @@ unsigned long debounceTime = 50;
 int goal = 0;
 int inputVal = 0;
 
+struct bits {
+    unsigned int r : 1;
+    unsigned int g : 1;
+    unsigned int b : 1;
+};
+
+struct bits rgb;
+
 void loop() {
     unsigned long ms = millis();
 
     int reRead = digitalRead(btnRePin);
     int blRead = digitalRead(btnBlPin);
     int bkRead = digitalRead(btnBkPin);
+    lastReDbncTime = reRead == lastReState ? lastReDbncTime : ms;
+    lastBlDbncTime = blRead == lastBlState ? lastBlDbncTime : ms;
+    lastBkDbncTime = bkRead == lastBkState ? lastBkDbncTime : ms;
     if (ms % 3000 == 0) {
         Serial.print("Sec: ");
         Serial.println(ms / 1000);
@@ -77,45 +83,23 @@ void loop() {
         Serial.println(inputVal);
     }
 
-    lastReDbncTime = reRead == lastReState ? lastReDbncTime : ms;
-    lastBlDbncTime = blRead == lastBlState ? lastBlDbncTime : ms;
-    lastBkDbncTime = bkRead == lastBkState ? lastBkDbncTime : ms;
-
-    if (ms - lastReDbncTime > debounceTime && reRead != (inputVal >> 0) & 1U) {
-        // inputVal ^= 1UL << 0;
-        if ((inputVal >> 0) & 1U) {
-            Serial.println("reBtnPress");
-            inputVal |= 1UL << 0;
-        } else {
-            inputVal &= ~(1UL << 0);
-        }
+    if (ms - lastReDbncTime > debounceTime && reRead != rgb.r) {
+        rgb.r = !rgb.r;
     }
-    if (ms - lastBkDbncTime > debounceTime && bkRead != (inputVal >> 1) & 1U) {
-        // inputVal ^= 1UL << 1;
-        if ((inputVal >> 1) & 1U) {
-            Serial.println("bkBtnPress");
-            inputVal |= 1UL << 1;
-        } else {
-            inputVal &= ~(1UL << 1);
-        }
+    if (ms - lastBkDbncTime > debounceTime && bkRead != rgb.g) {
+        rgb.g = !rgb.g;
     }
-    if (ms - lastBlDbncTime > debounceTime && blRead != (inputVal >> 2) & 1U) {
-        // inputVal ^= 1UL << 2;
-        if ((inputVal >> 2) & 1U) {
-            Serial.println("blBtnPress");
-            inputVal |= 1UL << 2;
-        } else {
-            inputVal &= ~(1UL << 2);
-        }
+    if (ms - lastBlDbncTime > debounceTime && blRead != rgb.b) {
+        rgb.b = !rgb.b;
     }
 
     lastReState = reRead;
     lastBlState = blRead;
     lastBkState = bkRead;
 
-    digitalWrite(multiRedPin, (inputVal >> 0) & 1U);
-    digitalWrite(multiGreenPin, (inputVal >> 1) & 1U);
-    digitalWrite(multiBluePin, (inputVal >> 2) & 1U);
+    digitalWrite(multiRedPin, rgb.r);
+    digitalWrite(multiGreenPin, rgb.g);
+    digitalWrite(multiBluePin, rgb.b);
 
     delay(1);
 }
