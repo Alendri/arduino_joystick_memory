@@ -1,14 +1,14 @@
 //DIGITAL OUTPUTS
-int multiRedPin = 4;
-int multiGreenPin = 3;
-int multiBluePin = 2;
-int bluePin = 8;
-int yellowPin = 6;
-int greenPin = 7;
-int redPin = 5;
-int whitePin = 9;
+const int multiRedPin = 4;
+const int multiGreenPin = 3;
+const int multiBluePin = 2;
+const int bluePin = 8;
+const int yellowPin = 6;
+const int greenPin = 7;
+const int redPin = 5;
+const int whitePin = 9;
 //PWM OUTPUTS
-int buzzPin = 10;
+const int buzzPin = 10;
 
 //Joystick input values:
 // N  0, 512
@@ -21,14 +21,12 @@ int buzzPin = 10;
 // NW 0, 1023
 
 //ANALOG INPUTS
-int xPin = A0;
-int yPin = A1;
+const int xPin = A0;
+const int yPin = A1;
 //DIGITAL INPUTS
-int btnBlPin = 11;
-int btnBkPin = 12;
-int btnRePin = 13;
-
-bool pause = false;
+const int btnBlPin = 11;
+const int btnBkPin = 12;
+const int btnRePin = 13;
 
 int lastReState = 0;
 int lastBkState = 0;
@@ -37,15 +35,22 @@ int lastBlState = 0;
 unsigned long lastReDbncTime = 0;
 unsigned long lastBkDbncTime = 0;
 unsigned long lastBlDbncTime = 0;
-int debounceTime = 30;
+const int debounceTime = 30;
 
+//The time of the previously entered correct input.
 unsigned long lastWin = 0;
+//The time stamp of the last failed input.
+unsigned long lastFail = 0;
 //The time the player has to respond.
 int timeout = 3000;
+
+int playmode = 0;
 
 int goal = 0;
 byte inputVal = 0;
 bool playing = false;
+//Waiting for player to release buttons.
+bool waiting = false;
 
 void setup() {
     pinMode(multiRedPin, OUTPUT);
@@ -109,28 +114,55 @@ void loop() {
         //Start a new game.
         playing = true;
         lastWin = ms;
+        lastFail = 0;
         goal = random(1, 8);
         Serial.print("Goal: ");
         Serial.println(goal);
     }
-    if (playing && analogRead(yPin) > 1000) {
-        goal = 0;
-        playing = false;
+    if (!playing && analogRead(yPin) > 1000) {
+        goal = 0b111;
+        playmode = 1;
     }
 
-    if (playing && inputVal == goal) {
+    if (playing && inputVal == goal && !waiting) {
+        //Progress in game.
         lastWin = ms;
-        goal = random(1, 8);
-    } else if (playing && ms - lastWin > timeout) {
+        waiting = true;
+        lastFail = 0;
+        int new_goal = 0;
+        new_goal = random(1, 8);
+        while (new_goal == goal) {
+            new_goal = random(1, 8);
+        }
+        goal = new_goal;
+    } else if (playing && playmode == 1 && inputVal > 0 && inputVal != goal && !waiting) {
+        //Fail timeout start.
+        lastFail = ms;
+    } else if (waiting && inputVal == 0) {
+        waiting = false;
+    }
+
+    if (playing && ms - lastWin > timeout) {
+        //Fail 1.
+        Serial.println("fail 1");
         playing = false;
         goal = 0;
+        tone(buzzPin, 300, 600);
+    }
+    if (playing && playmode == 1 && lastFail > 0 && ms - lastFail > 100) {
+        //Fail 2.
+        Serial.println("fail 2 ");
+        lastFail = 0;
+        playing = false;
+        goal = 0;
+        tone(buzzPin, 300, 600);
     }
 
     digitalWrite(redPin, goal == 1 || goal == 5);
-    digitalWrite(greenPin, goal == 2);
+    digitalWrite(greenPin, goal == 2 || goal == 6);
     digitalWrite(yellowPin, goal == 3);
     digitalWrite(bluePin, goal == 4 || goal == 6 || goal == 5);
-    digitalWrite(whitePin, goal == 7 || goal == 6);
+    digitalWrite(whitePin, goal == 7);
 
     delay(1);
 }
