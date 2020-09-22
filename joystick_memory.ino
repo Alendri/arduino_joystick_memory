@@ -30,6 +30,23 @@ int btnRePin = 13;
 
 bool pause = false;
 
+int lastReState = 0;
+int lastBkState = 0;
+int lastBlState = 0;
+
+unsigned long lastReDbncTime = 0;
+unsigned long lastBkDbncTime = 0;
+unsigned long lastBlDbncTime = 0;
+int debounceTime = 30;
+
+unsigned long lastWin = 0;
+//The time the player has to respond.
+int timeout = 3000;
+
+int goal = 0;
+byte inputVal = 0;
+bool playing = false;
+
 void setup() {
     pinMode(multiRedPin, OUTPUT);
     pinMode(multiGreenPin, OUTPUT);
@@ -45,19 +62,9 @@ void setup() {
     pinMode(btnBlPin, INPUT);
     pinMode(btnRePin, INPUT);
     Serial.begin(115200);
+
+    randomSeed(analogRead(5));
 }
-
-int lastReState = 0;
-int lastBkState = 0;
-int lastBlState = 0;
-
-unsigned long lastReDbncTime = 0;
-unsigned long lastBkDbncTime = 0;
-unsigned long lastBlDbncTime = 0;
-unsigned long debounceTime = 50;
-
-int goal = 0;
-byte inputVal = 0b10000000;
 
 void loop() {
     unsigned long ms = millis();
@@ -70,9 +77,14 @@ void loop() {
     lastBkDbncTime = bkRead == lastBkState ? lastBkDbncTime : ms;
     if (ms % 3000 == 0) {
         Serial.print("Sec: ");
-        Serial.println(ms / 1000);
-        Serial.print("Input: ");
-        Serial.println(inputVal, BIN);
+        Serial.print(ms / 1000);
+        Serial.print("  Input: ");
+        Serial.print(inputVal, BIN);
+        Serial.print(" ");
+        Serial.println(inputVal);
+        // Serial.print(analogRead(xPin));
+        // Serial.print(" ");
+        // Serial.println(analogRead(yPin));
     }
 
     if (ms - lastReDbncTime > debounceTime && reRead != bitRead(inputVal, 0)) {
@@ -92,6 +104,33 @@ void loop() {
     digitalWrite(multiRedPin, bitRead(inputVal, 0));
     digitalWrite(multiGreenPin, bitRead(inputVal, 1));
     digitalWrite(multiBluePin, bitRead(inputVal, 2));
+
+    if (!playing && analogRead(yPin) < 100) {
+        //Start a new game.
+        playing = true;
+        lastWin = ms;
+        goal = random(1, 8);
+        Serial.print("Goal: ");
+        Serial.println(goal);
+    }
+    if (playing && analogRead(yPin) > 1000) {
+        goal = 0;
+        playing = false;
+    }
+
+    if (playing && inputVal == goal) {
+        lastWin = ms;
+        goal = random(1, 8);
+    } else if (playing && ms - lastWin > timeout) {
+        playing = false;
+        goal = 0;
+    }
+
+    digitalWrite(redPin, goal == 1 || goal == 5);
+    digitalWrite(greenPin, goal == 2);
+    digitalWrite(yellowPin, goal == 3);
+    digitalWrite(bluePin, goal == 4 || goal == 6 || goal == 5);
+    digitalWrite(whitePin, goal == 7 || goal == 6);
 
     delay(1);
 }
